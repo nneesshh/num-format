@@ -257,6 +257,9 @@ pub mod digit_table;
 /// Convert integer to string
 pub mod itoa;
 
+/// Convert float to string
+pub mod ryu;
+
 mod buffer;
 mod constants;
 mod custom_format;
