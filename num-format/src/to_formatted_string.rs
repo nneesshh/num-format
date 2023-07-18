@@ -4,7 +4,7 @@ use std::fmt;
 use std::io;
 
 use crate::constants::MAX_BUF_LEN;
-use crate::sealed::Sealed;
+
 use crate::{Buffer, Format, ToFormattedStr};
 
 /// <b><u>A key trait</u></b>. Gives numbers the [`to_formatted_string`] method.
@@ -12,7 +12,7 @@ use crate::{Buffer, Format, ToFormattedStr};
 /// This trait is sealed; so you may not implement it on your own types.
 ///
 /// [`to_formatted_string`]: trait.ToFormattedString.html#method.to_formatted_string
-pub trait ToFormattedString: Sealed + Sized {
+pub trait ToFormattedString: crate::private::Sealed + Sized {
     #[doc(hidden)]
     fn read_to_fmt_writer<F, W>(&self, w: W, format: &F) -> Result<usize, fmt::Error>
     where
@@ -40,7 +40,7 @@ impl<T> ToFormattedString for T
 where
     T: ToFormattedStr,
 {
-    #[inline(always)]
+    #[inline(never)]
     fn read_to_fmt_writer<F, W>(&self, mut w: W, format: &F) -> Result<usize, fmt::Error>
     where
         F: Format,
@@ -52,7 +52,7 @@ where
         Ok(c)
     }
 
-    #[inline(always)]
+    #[inline(never)]
     fn read_to_io_writer<F, W>(&self, mut w: W, format: &F) -> Result<usize, io::Error>
     where
         F: Format,

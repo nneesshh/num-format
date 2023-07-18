@@ -6,11 +6,10 @@ use std::ops::Neg;
 
 use num_bigint::{BigInt, BigUint, Sign};
 
-use crate::sealed::Sealed;
 use crate::{Format, Grouping, ToFormattedString};
 
 impl ToFormattedString for BigInt {
-    #[inline(always)]
+    #[inline(never)]
     fn read_to_io_writer<F, W>(&self, mut w: W, format: &F) -> Result<usize, io::Error>
     where
         F: Format,
@@ -32,7 +31,7 @@ impl ToFormattedString for BigInt {
         }
     }
 
-    #[inline(always)]
+    #[inline(never)]
     fn read_to_fmt_writer<F, W>(&self, mut w: W, format: &F) -> Result<usize, fmt::Error>
     where
         F: Format,
@@ -56,7 +55,7 @@ impl ToFormattedString for BigInt {
 }
 
 impl ToFormattedString for BigUint {
-    #[inline(always)]
+    #[inline(never)]
     fn read_to_io_writer<F, W>(&self, w: W, format: &F) -> Result<usize, io::Error>
     where
         F: Format,
@@ -67,7 +66,7 @@ impl ToFormattedString for BigUint {
         Ok(c)
     }
 
-    #[inline(always)]
+    #[inline(never)]
     fn read_to_fmt_writer<F, W>(&self, w: W, format: &F) -> Result<usize, fmt::Error>
     where
         F: Format,
@@ -79,10 +78,10 @@ impl ToFormattedString for BigUint {
     }
 }
 
-impl Sealed for BigInt {}
-impl Sealed for BigUint {}
+impl crate::private::Sealed for BigInt {}
+impl crate::private::Sealed for BigUint {}
 
-#[inline(always)]
+#[inline(never)]
 fn io_algorithm<F, W>(s: String, mut w: W, format: &F) -> Result<usize, io::Error>
 where
     W: io::Write,
@@ -142,7 +141,7 @@ where
     Ok(bytes_written)
 }
 
-#[inline(always)]
+#[inline(never)]
 fn fmt_algorithm<F, W>(s: String, mut w: W, format: &F) -> Result<usize, fmt::Error>
 where
     W: fmt::Write,

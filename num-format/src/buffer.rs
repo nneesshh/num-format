@@ -41,7 +41,7 @@ pub struct Buffer {
 
 impl Buffer {
     /// Constructs a new, stack-allocated buffer.
-    #[inline(always)]
+    #[inline(never)]
     pub fn new() -> Buffer {
         Buffer {
             inner: [0; MAX_BUF_LEN],
@@ -51,31 +51,31 @@ impl Buffer {
     }
 
     /// Returns a `&[u8]` view into the buffer.
-    #[inline(always)]
+    #[inline(never)]
     pub fn as_bytes(&self) -> &[u8] {
         &self.inner[self.pos..self.end]
     }
 
     /// Returns a `&str` view into the buffer.
-    #[inline(always)]
+    #[inline(never)]
     pub fn as_str(&self) -> &str {
         unsafe { str::from_utf8_unchecked(self.as_bytes()) }
     }
 
     /// Returns `true` if the buffer is empty; `false` otherwise.
-    #[inline(always)]
+    #[inline(never)]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    /// Returns the length (in bytes) of the buffer.
-    #[inline(always)]
-    pub fn len(&self) -> usize {
+    /// Returns the data length (in bytes) of the buffer.
+    #[inline(never)]
+    pub fn data_length(&self) -> usize {
         self.end - self.pos
     }
 
     /// Writes the provided number into the buffer using the provided format.
-    #[inline(always)]
+    #[inline(never)]
     pub fn write_formatted<F, N>(&mut self, n: &N, format: &F) -> usize
     where
         F: Format,
@@ -84,37 +84,21 @@ impl Buffer {
         n.read_to_buffer(self, format)
     }
 
-    #[inline(always)]
+    #[inline(never)]
     pub(crate) fn as_mut_ptr(&mut self) -> *mut u8 {
         self.inner.as_mut_ptr()
-    }
-
-    #[inline(always)]
-    pub(crate) fn write_with_itoa<N: itoa::Integer>(&mut self, n: N) -> usize {
-        let mut itoa_buf = itoa::Buffer::new();
-
-        let s = itoa_buf.format(n);
-        let s_len = s.len();
-
-        self.pos = MAX_BUF_LEN - s_len;
-        self.end = MAX_BUF_LEN;
-
-        let dst = &mut self.inner[self.pos..self.end];
-        dst.copy_from_slice(s.as_bytes());
-
-        s_len
     }
 }
 
 impl AsRef<str> for Buffer {
-    #[inline(always)]
+    #[inline(never)]
     fn as_ref(&self) -> &str {
         self.as_str()
     }
 }
 
 impl Borrow<str> for Buffer {
-    #[inline(always)]
+    #[inline(never)]
     fn borrow(&self) -> &str {
         self.as_str()
     }
@@ -130,7 +114,7 @@ impl Default for Buffer {
     /// Same as the [`new`] method.
     ///
     /// [`new`]: struct.Buffer.html#method.new
-    #[inline(always)]
+    #[inline(never)]
     fn default() -> Buffer {
         Buffer::new()
     }
@@ -139,7 +123,7 @@ impl Default for Buffer {
 impl Deref for Buffer {
     type Target = str;
 
-    #[inline(always)]
+    #[inline(never)]
     fn deref(&self) -> &Self::Target {
         self.as_str()
     }

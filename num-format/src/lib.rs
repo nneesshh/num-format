@@ -251,6 +251,12 @@ extern crate lazy_static;
 #[macro_use]
 extern crate serde;
 
+/// Chars for 0~99 digits
+pub mod digit_table;
+
+/// Convert integer to string
+pub mod itoa;
+
 mod buffer;
 mod constants;
 mod custom_format;
@@ -263,31 +269,39 @@ mod impls;
 mod locale;
 pub mod parsing;
 mod strings;
+
 #[cfg(all(feature = "with-system-locale", any(unix, windows)))]
 mod system_locale;
 mod to_formatted_str;
+
 #[cfg(feature = "std")]
 mod to_formatted_string;
+
 #[cfg(feature = "std")]
 mod write_formatted;
 
 pub use self::buffer::Buffer;
 pub use self::custom_format::CustomFormat;
 pub use self::custom_format_builder::CustomFormatBuilder;
+pub use self::digit_table::DIGIT_TABLE;
 pub use self::error::Error;
 pub use self::error_kind::ErrorKind;
 pub use self::format::Format;
 pub use self::grouping::Grouping;
 pub use self::locale::Locale;
+
 #[cfg(all(feature = "with-system-locale", any(unix, windows)))]
 pub use self::system_locale::SystemLocale;
 pub use self::to_formatted_str::ToFormattedStr;
+
 #[cfg(feature = "std")]
 pub use self::to_formatted_string::ToFormattedString;
+
 #[cfg(feature = "std")]
 pub use self::write_formatted::WriteFormatted;
 
-mod sealed {
+// Seal to prevent downstream implementations of the Integer trait.
+mod private {
     pub trait Sealed {}
 }
 

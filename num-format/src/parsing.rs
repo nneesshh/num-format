@@ -18,7 +18,6 @@ use core::str;
 use crate::constants::*;
 use crate::error::Error;
 use crate::format::Format;
-use crate::sealed::Sealed;
 
 /// Trait that provides string-like types with a [`parse_formatted`]
 /// method, allowing conversion from a formatted string into a number.
@@ -65,7 +64,7 @@ where
 /// This trait is sealed; so you may not implement it on your own types.
 ///
 /// [`ParseFormatted`]: trait.ParseFormatted.html
-pub trait FromFormattedStr: Sealed + Sized {
+pub trait FromFormattedStr: crate::private::Sealed + Sized {
     #[allow(missing_docs)]
     fn from_formatted_str<F>(s: &str, format: &F) -> Result<Self, Error>
     where

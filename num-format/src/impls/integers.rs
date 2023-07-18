@@ -2,25 +2,27 @@
 
 use core::marker::PhantomData;
 use core::num::{NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize};
-use core::ptr;
 
 use crate::buffer::Buffer;
 use crate::constants::*;
-use crate::format::Format;
+use crate::format::{write_one_byte_with_sep, write_two_bytes_with_sep, Format, Sep};
 use crate::grouping::Grouping;
-use crate::sealed::Sealed;
+
 use crate::to_formatted_str::ToFormattedStr;
 
 // unsigned integers
 
 impl ToFormattedStr for u8 {
     #[doc(hidden)]
-    #[inline(always)]
+    #[inline(never)]
     fn read_to_buffer<'a, F>(&self, buf: &'a mut Buffer, _: &F) -> usize
     where
         F: Format,
     {
-        buf.write_with_itoa(*self)
+        let s = crate::itoa::format(*self, buf.inner.as_mut_ptr(), buf.pos);
+        let s_len = s.len();
+        buf.pos -= s_len;
+        s_len
     }
 }
 
@@ -28,7 +30,7 @@ macro_rules! impl_unsigned {
     ($type:ty, $max_len:expr) => {
         impl ToFormattedStr for $type {
             #[doc(hidden)]
-            #[inline(always)]
+            #[inline(never)]
             fn read_to_buffer<'a, F>(&self, buf: &'a mut Buffer, format: &F) -> usize
             where
                 F: Format,
@@ -46,12 +48,12 @@ impl_unsigned!(usize, USIZE_MAX_LEN);
 impl_unsigned!(u64, U64_MAX_LEN);
 impl_unsigned!(u128, U128_MAX_LEN);
 
-impl Sealed for u8 {}
-impl Sealed for u16 {}
-impl Sealed for u32 {}
-impl Sealed for usize {}
-impl Sealed for u64 {}
-impl Sealed for u128 {}
+impl crate::private::Sealed for u8 {}
+impl crate::private::Sealed for u16 {}
+impl crate::private::Sealed for u32 {}
+impl crate::private::Sealed for usize {}
+impl crate::private::Sealed for u64 {}
+impl crate::private::Sealed for u128 {}
 
 // signed integers
 
@@ -59,7 +61,7 @@ macro_rules! impl_signed {
     ($type:ty, $max_len:expr) => {
         impl ToFormattedStr for $type {
             #[doc(hidden)]
-            #[inline(always)]
+            #[inline(never)]
             fn read_to_buffer<'a, F>(&self, buf: &'a mut Buffer, format: &F) -> usize
             where
                 F: Format,
@@ -91,23 +93,26 @@ impl_signed!(isize, ISIZE_MAX_LEN);
 impl_signed!(i64, I64_MAX_LEN);
 impl_signed!(i128, I128_MAX_LEN);
 
-impl Sealed for i8 {}
-impl Sealed for i16 {}
-impl Sealed for i32 {}
-impl Sealed for isize {}
-impl Sealed for i64 {}
-impl Sealed for i128 {}
+impl crate::private::Sealed for i8 {}
+impl crate::private::Sealed for i16 {}
+impl crate::private::Sealed for i32 {}
+impl crate::private::Sealed for isize {}
+impl crate::private::Sealed for i64 {}
+impl crate::private::Sealed for i128 {}
 
 // non-zero unsigned integers
 
 impl ToFormattedStr for NonZeroU8 {
     #[doc(hidden)]
-    #[inline(always)]
+    #[inline(never)]
     fn read_to_buffer<'a, F>(&self, buf: &'a mut Buffer, _: &F) -> usize
     where
         F: Format,
     {
-        buf.write_with_itoa(self.get())
+        let s = crate::itoa::format(self.get(), buf.inner.as_mut_ptr(), buf.pos);
+        let s_len = s.len();
+        buf.pos -= s_len;
+        s_len
     }
 }
 
@@ -115,7 +120,7 @@ macro_rules! impl_non_zero {
     ($type:ty, $related_type:ty, $max_len:expr) => {
         impl ToFormattedStr for $type {
             #[doc(hidden)]
-            #[inline(always)]
+            #[inline(never)]
             fn read_to_buffer<'a, F>(&self, buf: &'a mut Buffer, format: &F) -> usize
             where
                 F: Format,
@@ -133,16 +138,16 @@ impl_non_zero!(NonZeroUsize, usize, USIZE_MAX_LEN);
 impl_non_zero!(NonZeroU64, u64, U64_MAX_LEN);
 impl_non_zero!(NonZeroU128, u128, U128_MAX_LEN);
 
-impl Sealed for NonZeroU8 {}
-impl Sealed for NonZeroU16 {}
-impl Sealed for NonZeroU32 {}
-impl Sealed for NonZeroUsize {}
-impl Sealed for NonZeroU64 {}
-impl Sealed for NonZeroU128 {}
+impl crate::private::Sealed for NonZeroU8 {}
+impl crate::private::Sealed for NonZeroU16 {}
+impl crate::private::Sealed for NonZeroU32 {}
+impl crate::private::Sealed for NonZeroUsize {}
+impl crate::private::Sealed for NonZeroU64 {}
+impl crate::private::Sealed for NonZeroU128 {}
 
 // helper functions
 
-#[inline(always)]
+#[inline(never)]
 fn run_core_algorithm<F>(mut n: u128, buf: &mut Buffer, format: &F) -> usize
 where
     F: Format,
@@ -152,7 +157,10 @@ where
     let separator = format.separator().into_str();
     let grouping = format.grouping();
     if separator.is_empty() || grouping == Grouping::Posix {
-        return buf.write_with_itoa(n);
+        let s = crate::itoa::format(n, buf.inner.as_mut_ptr(), buf.pos);
+        let s_len = s.len();
+        buf.pos -= s_len;
+        return s_len;
     }
 
     // Reset our position to the end of the buffer
@@ -163,7 +171,7 @@ where
     let mut sep = Sep {
         ptr: separator.as_bytes().as_ptr(),
         len: separator.len(),
-        pos: MAX_BUF_LEN as isize - 4,
+        pos: (buf.pos) as isize - 4,
         step: match grouping {
             Grouping::Standard => 4isize,
             Grouping::Indian => 3isize,
@@ -198,34 +206,14 @@ where
     buf.end - buf.pos
 }
 
-struct Sep<'a> {
-    ptr: *const u8,
-    len: usize,
-    pos: isize,
-    step: isize,
-    phantom: PhantomData<&'a ()>,
-}
-
-#[inline(always)]
+#[inline(never)]
 fn write_one_byte(buf: &mut Buffer, sep: &mut Sep<'_>, table_index: isize) {
-    buf.pos -= 1;
-    if sep.pos == (buf.pos as isize) {
-        buf.pos -= sep.len - 1;
-        unsafe { ptr::copy_nonoverlapping(sep.ptr, buf.as_mut_ptr().add(buf.pos), sep.len) }
-        sep.pos -= sep.step + (sep.len as isize - 1);
-        buf.pos -= 1;
-    }
-    unsafe {
-        ptr::copy_nonoverlapping(
-            TABLE.as_ptr().offset(table_index),
-            buf.as_mut_ptr().add(buf.pos),
-            1,
-        )
-    };
+    let index = buf.pos as isize;
+    buf.pos = write_one_byte_with_sep(buf.as_mut_ptr(), index, sep, table_index) as usize;
 }
 
-#[inline(always)]
+#[inline(never)]
 fn write_two_bytes(buf: &mut Buffer, sep: &mut Sep<'_>, table_index: isize) {
-    write_one_byte(buf, sep, table_index + 1);
-    write_one_byte(buf, sep, table_index);
+    let index = buf.pos as isize;
+    buf.pos = write_two_bytes_with_sep(buf.as_mut_ptr(), index, sep, table_index) as usize;
 }
